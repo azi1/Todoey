@@ -9,15 +9,16 @@
 import UIKit
 
 class TodoListViewController: UITableViewController {
-    var itemArray = ["buy eggs", "find Zohaib", "Cook"]
-    let defaults = UserDefaults.standard
-    
+    var itemArray = [TodoItem]()
+          let dataPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+  
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        if let items = defaults.array(forKey: "toDoListArray") as? [String] {
-            itemArray = items
-        }
+
+        loadData()
+        
+        
+        
     }
 
     //MARK - TABleView Datasource
@@ -28,8 +29,10 @@ class TodoListViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell  = tableView.dequeueReusableCell(withIdentifier: "toDoItemCell", for: indexPath)
-        cell.textLabel?.text = itemArray[indexPath.row]
-       
+        let item  = itemArray[indexPath.row];
+
+        cell.textLabel?.text = item.Todo
+        cell.accessoryType = item.isDone ? .checkmark : .none
         return cell
     
     }
@@ -37,14 +40,10 @@ class TodoListViewController: UITableViewController {
     //MARK - TABLEView DELEGATES
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-  
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark
-        {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        } else {
-                 tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        }
-        
+       
+        itemArray[indexPath.row].isDone = !itemArray[indexPath.row].isDone
+         self.PersistData()
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
         
     }
@@ -59,8 +58,14 @@ class TodoListViewController: UITableViewController {
         
         let action  = UIAlertAction(title: "Add Item", style: .default) { (action) in
             print("success");
-            self.itemArray.append(TextField.text!)
-            self.defaults.set(self.itemArray, forKey: "toDoListArray")
+            let newItem = TodoItem()
+            newItem.Todo = TextField.text!
+            self.itemArray.append(newItem)
+           
+            self.PersistData()
+           
+//            self.defaults.set(self.itemArray, forKey: "toDoListArray")
+    
             self.tableView.reloadData()
             
         
@@ -79,6 +84,35 @@ class TodoListViewController: UITableViewController {
         present(alert, animated: true,completion: nil)
     
     
+    }
+    
+    // MARK data persist func
+    func PersistData() {
+        let encoder = PropertyListEncoder()
+        do{
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataPath!)
+        } catch{
+            print("error saving data")
+            
+        }
+        
+    }
+    
+    //LOad persisted data
+    
+    func loadData () {
+        
+        if let data = try? Data(contentsOf: dataPath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([TodoItem].self, from: data)
+            }
+            catch{
+                print("could not retrive data")
+            }
+        }
+        
     }
     
     
